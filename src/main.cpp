@@ -1,27 +1,29 @@
 #include <Arduino.h>
 
-// Gives the pin numbers for the ultrasonic sensor
-#define echoPin 2
-#define trigPin 3
+// ESP32 GPIO pins for the HC-SR04 ultrasonic sensor
+#define echoPin 26
+#define trigPin 27
+
+// ESP32 GPIO pin for the buzzer
+const int buzzer = 25;
 
 // Variables for the ultrasonic sensor
 long duration;
 float distance;
 
-const int buzzer = 8; // Buzzer connected to pin 9
-
 void setup() {
-
   // Opens port 9600 for serial communication
   Serial.begin(9600);
 
-  // Sets the trigPin as an OUTPUT and the echoPin as an INPUT
+  // Sets the HC-SR04 pins
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
 
   // Sets the buzzer pin as an OUTPUT
   pinMode(buzzer, OUTPUT);
 
+  // Make sure the buzzer starts off
+  noTone(buzzer);
 }
 
 void loop() {
@@ -29,30 +31,38 @@ void loop() {
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
 
-  // Sets the trigPin on HIGH state for 10 micro seconds
+  // Sends a 10 microsecond trigger pulse
   digitalWrite(trigPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
 
-  // Reads the echoPin, returns the sound wave travel time in microseconds
-  duration = pulseIn(echoPin, HIGH);
+  // Reads the echoPin, with a 30 ms timeout
+  duration = pulseIn(echoPin, HIGH, 30000);
 
-  // Calculating the distance
+  // If no echo was received, don't calculate a false distance
+  if (duration == 0) {
+    Serial.println("No echo received");
+    noTone(buzzer);
+    delay(100);
+    return;
+  }
+
+  // Calculate the distance in centimetres
   distance = duration * 0.034 / 2;
 
-  // Prints the distance on the Serial Monitor
+  // Print the distance on the Serial Monitor
   Serial.print("Distance: ");
   Serial.print(distance);
   Serial.println(" cm");
 
-  // Waits for 1 second before the next loop
-
-  // If the distance is less than 10 cm, the buzzer will sound
-  while (distance < 10) {
-    tone(buzzer, 1000); // Send 1KHz sound signal...
-    delay(500); // Wait for 500 milliseconds
-    tone(buzzer, 750); // Send 1KHz sound signal...
-    delay(500); // Wait for 500 milliseconds
+  // If the distance is less than 10 cm, sound the buzzer
+  if (distance < 10) {
+    tone(buzzer, 1000);
+    delay(500);
+    tone(buzzer, 750);
+    delay(500);
+  } else {
+    noTone(buzzer);
+    delay(100);
   }
-
 }
